@@ -1561,6 +1561,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
                 instances=instances,
                 parameters=parameters,
                 timeout=timeout,
+                retry=base._DEFAULT_RETRY,
             )
 
             return Prediction(
