@@ -34,21 +34,6 @@ _SHORT_MODEL_ID_TO_TUNING_PIPELINE_MAP = {
     "text-bison": "https://us-kfp.pkg.dev/ml-pipeline/large-language-model-pipelines/tune-large-model/v2.0.0"
 }
 
-_SDK_PRIVATE_PREVIEW_LAUNCH_STAGE = frozenset(
-    [
-        gca_publisher_model.PublisherModel.LaunchStage.PRIVATE_PREVIEW,
-        gca_publisher_model.PublisherModel.LaunchStage.PUBLIC_PREVIEW,
-        gca_publisher_model.PublisherModel.LaunchStage.GA,
-    ]
-)
-_SDK_PUBLIC_PREVIEW_LAUNCH_STAGE = frozenset(
-    [
-        gca_publisher_model.PublisherModel.LaunchStage.PUBLIC_PREVIEW,
-        gca_publisher_model.PublisherModel.LaunchStage.GA,
-    ]
-)
-_SDK_GA_LAUNCH_STAGE = frozenset([gca_publisher_model.PublisherModel.LaunchStage.GA])
-
 _LOGGER = base.Logger(__name__)
 
 T = TypeVar("T", bound="_ModelGardenModel")
@@ -143,28 +128,6 @@ def _get_model_info(
 class _ModelGardenModel:
     """Base class for shared methods and properties across Model Garden models."""
 
-    _LAUNCH_STAGE: gca_publisher_model.PublisherModel.LaunchStage = (
-        _SDK_PUBLIC_PREVIEW_LAUNCH_STAGE
-    )
-
-    def _validate_launch_stage(
-        self,
-        publisher_model_resource: gca_publisher_model.PublisherModel,
-    ) -> None:
-        """Validates the model class _LAUNCH_STAGE matches the PublisherModel resource's launch stage.
-
-        Args:
-            publisher_model_resource (gca_publisher_model.PublisherModel
-                The GAPIC PublisherModel resource for this model.
-        """
-
-        publisher_launch_stage = publisher_model_resource.launch_stage
-
-        if publisher_launch_stage not in self._LAUNCH_STAGE:
-            raise ValueError(
-                f"The model you are trying to instantiate does not support the launch stage: {publisher_launch_stage.name}"
-            )
-
     # Subclasses override this attribute to specify their instance schema
     _INSTANCE_SCHEMA_URI: Optional[str] = None
 
@@ -216,8 +179,6 @@ class _ModelGardenModel:
             raise ValueError(
                 f"{model_name} is of type {model_info.interface_class.__name__} not of type {cls.__name__}"
             )
-
-        cls._validate_launch_stage(cls, model_info.publisher_model_resource)
 
         return model_info.interface_class(
             model_id=model_name,
