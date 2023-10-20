@@ -135,10 +135,11 @@ testing_extra_require = (
     full_extra_require
     + profiler_extra_require
     + [
-        "bigframes; python_version>='3.10'",
+        "bigframes; python_version=='3.10'",
+        # "pandas > 1.3.3; python_version=='3.11'",
         "grpcio-testing",
         "ipython",
-        "kfp",
+        "kfp >= 2.0.0, < 3.0.0",
         "pyfakefs",
         "pytest-asyncio",
         "pytest-xdist",
