@@ -17,6 +17,7 @@
 
 import copy
 import logging
+import time
 from typing import Dict, List, Optional
 
 from google.cloud.aiplatform import initializer
@@ -40,6 +41,9 @@ from google.cloud.aiplatform.preview.vertex_ray.util import (
 from google.protobuf import field_mask_pb2  # type: ignore
 
 
+_DEFAULT_UPDATE_TIMEOUT = 1800
+
+
 def create_ray_cluster(
     head_node_type: Optional[resources.Resources] = resources.Resources(),
     python_version: Optional[str] = "3_10",
@@ -47,6 +51,7 @@ def create_ray_cluster(
     network: Optional[str] = None,
     cluster_name: Optional[str] = None,
     worker_node_types: Optional[List[resources.Resources]] = None,
+    custom_images: Optional[resources.NodeImages] = None,
     labels: Optional[Dict[str, str]] = None,
 ) -> str:
     """Create a ray cluster on the Vertex AI.
@@ -97,6 +102,8 @@ def create_ray_cluster(
             or hyphen.
         worker_node_types: The list of Resources of the worker nodes. The same
             Resources object should not appear multiple times in the list.
+        custom_images: The NodeImages which specifies head node and worker nodes
+            images.
         labels:
             The labels with user-defined metadata to organize Ray cluster.
 
@@ -124,6 +131,14 @@ def create_ray_cluster(
                 "[Ray on Vertex AI]: For head_node_type, "
                 + "Resources.node_count must be 1."
             )
+        if (
+            head_node_type.accelerator_type is None
+            and head_node_type.accelerator_count > 0
+        ):
+            raise ValueError(
+                "[Ray on Vertex]: accelerator_type must be specified when"
+                + " accelerator_count is set to a value other than 0."
+            )
 
     resource_pool_images = {}
 
@@ -141,12 +156,23 @@ def create_ray_cluster(
     image_uri = _validation_utils.get_image_uri(
         ray_version, python_version, enable_cuda
     )
+    if custom_images is not None:
+        if not (custom_images.head is None or custom_images.worker is None):
+            image_uri = custom_images.head
     resource_pool_images[resource_pool_0.id] = image_uri
 
     worker_pools = []
     i = 0
     if worker_node_types:
         for worker_node_type in worker_node_types:
+            if (
+                worker_node_type.accelerator_type is None
+                and worker_node_type.accelerator_count > 0
+            ):
+                raise ValueError(
+                    "[Ray on Vertex]: accelerator_type must be specified when"
+                    + " accelerator_count is set to a value other than 0."
+                )
             # Worker and head share the same MachineSpec, merge them into the
             # same ResourcePool
             additional_replica_count = resources._check_machine_spec_identical(
@@ -175,6 +201,9 @@ def create_ray_cluster(
                 image_uri = _validation_utils.get_image_uri(
                     ray_version, python_version, enable_cuda
                 )
+                if custom_images is not None:
+                    if not (custom_images.head is None or custom_images.worker is None):
+                        image_uri = custom_images.worker
                 resource_pool_images[resource_pool.id] = image_uri
 
             i += 1
@@ -366,6 +395,12 @@ def update_ray_cluster(
         ) from e
 
     # block before returning
-    response = operation_future.result()
-    print("[Ray on Vertex AI]: Successfully updated the cluster.")
+    start_time = time.time()
+    response = operation_future.result(timeout=_DEFAULT_UPDATE_TIMEOUT)
+    duration = (time.time() - start_time) / 60
+    print(
+        "[Ray on Vertex AI]: Successfully updated the cluster within {} mininutes.".format(
+            duration
+        )
+    )
     return response.name
