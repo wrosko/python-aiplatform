@@ -43,6 +43,20 @@ from google.protobuf import field_mask_pb2 as field_mask
 from google.cloud.aiplatform.compat.services import (
     pipeline_service_client,
 )
+from google.cloud.aiplatform_v1beta1.types import (
+    pipeline_service as PipelineServiceV1Beta1,
+)
+from google.cloud.aiplatform.preview.pipelinejob import (
+    pipeline_jobs_batch_delete_runner as preview_pipeline_jobs_batch_delete_runner,
+)
+from google.cloud.aiplatform_v1beta1.services import (
+    pipeline_service as v1beta1_pipeline_service,
+)
+from google.cloud.aiplatform_v1beta1.types import (
+    pipeline_job as v1beta1_pipeline_job,
+    pipeline_state as v1beta1_pipeline_state,
+    context as v1beta1_context,
+)
 from google.cloud.aiplatform.compat.types import (
     pipeline_job as gca_pipeline_job,
     pipeline_state as gca_pipeline_state,
@@ -52,7 +66,9 @@ from google.cloud.aiplatform.compat.types import (
 _TEST_PROJECT = "test-project"
 _TEST_LOCATION = "us-central1"
 _TEST_PIPELINE_JOB_DISPLAY_NAME = "sample-pipeline-job-display-name"
+_TEST_PIPELINE_JOB_DISPLAY_NAME_2 = "sample-pipeline-job-display-name-2"
 _TEST_PIPELINE_JOB_ID = "sample-test-pipeline-202111111"
+_TEST_PIPELINE_JOB_ID_2 = "sample-test-pipeline-202111112"
 _TEST_GCS_BUCKET_NAME = "my-bucket"
 _TEST_GCS_OUTPUT_DIRECTORY = f"gs://{_TEST_GCS_BUCKET_NAME}/output_artifacts/"
 _TEST_CREDENTIALS = auth_credentials.AnonymousCredentials()
@@ -65,6 +81,7 @@ _TEST_PARENT = f"projects/{_TEST_PROJECT}/locations/{_TEST_LOCATION}"
 _TEST_NETWORK = f"projects/{_TEST_PROJECT}/global/networks/{_TEST_PIPELINE_JOB_ID}"
 
 _TEST_PIPELINE_JOB_NAME = f"projects/{_TEST_PROJECT}/locations/{_TEST_LOCATION}/pipelineJobs/{_TEST_PIPELINE_JOB_ID}"
+_TEST_PIPELINE_JOB_NAME_2 = f"projects/{_TEST_PROJECT}/locations/{_TEST_LOCATION}/pipelineJobs/{_TEST_PIPELINE_JOB_ID_2}"
 _TEST_PIPELINE_JOB_LIST_READ_MASK = field_mask.FieldMask(
     paths=pipeline_constants._READ_MASK_FIELDS
 )
@@ -233,6 +250,63 @@ def mock_pipeline_service_create():
             network=_TEST_NETWORK,
         )
         yield mock_create_pipeline_job
+
+@pytest.fixture
+def mock_pipeline_service_create_with_name2():
+    with mock.patch.object(
+        pipeline_service_client.PipelineServiceClient, "create_pipeline_job"
+    ) as mock_create_pipeline_job:
+        mock_create_pipeline_job.return_value = gca_pipeline_job.PipelineJob(
+            name=_TEST_PIPELINE_JOB_NAME_2,
+            state=gca_pipeline_state.PipelineState.PIPELINE_STATE_SUCCEEDED,
+            create_time=_TEST_PIPELINE_CREATE_TIME,
+            service_account=_TEST_SERVICE_ACCOUNT,
+            network=_TEST_NETWORK,
+        )
+        yield mock_create_pipeline_job
+
+
+@pytest.fixture
+def mock_pipeline_v1beta1_service_batch_delete():
+    with mock.patch.object(
+        v1beta1_pipeline_service.PipelineServiceClient, "batch_delete_pipeline_jobs"
+    ) as mock_batch_pipeline_jobs:
+        mock_batch_pipeline_jobs.return_value = (
+            make_batch_delete_pipeline_jobs_response()
+        )
+        yield mock_batch_pipeline_jobs
+
+
+def make_v1beta1_pipeline_job(name: str, state: v1beta1_pipeline_state.PipelineState):
+    return v1beta1_pipeline_job.PipelineJob(
+        name=name,
+        state=state,
+        create_time=_TEST_PIPELINE_CREATE_TIME,
+        service_account=_TEST_SERVICE_ACCOUNT,
+        network=_TEST_NETWORK,
+        job_detail=v1beta1_pipeline_job.PipelineJobDetail(
+            pipeline_run_context=v1beta1_context.Context(
+                name=name,
+            )
+        ),
+    )
+
+
+def make_batch_delete_pipeline_jobs_response():
+    response = PipelineServiceV1Beta1.BatchDeletePipelineJobsResponse()
+    response.pipeline_jobs.append(
+        make_v1beta1_pipeline_job(
+            _TEST_PIPELINE_JOB_NAME,
+            v1beta1_pipeline_state.PipelineState.PIPELINE_STATE_SUCCEEDED,
+        )
+    )
+    response.pipeline_jobs.append(
+        make_v1beta1_pipeline_job(
+            _TEST_PIPELINE_JOB_NAME_2,
+            v1beta1_pipeline_state.PipelineState.PIPELINE_STATE_FAILED,
+        )
+    )
+    return response
 
 
 @pytest.fixture
@@ -1887,3 +1961,90 @@ class TestPipelineJob:
         assert associated_experiment.resource_name == _TEST_CONTEXT_NAME
 
         assert add_context_children_mock.call_count == 1
+
+    @pytest.mark.usefixtures(
+        "mock_pipeline_service_create",
+        "mock_pipeline_service_create_with_name2",
+        "mock_pipeline_service_get",
+        "mock_pipeline_v1beta1_service_batch_delete",
+    )
+    def test_create_two_and_batch_delete_pipeline_jobs_returns_response(
+        self, 
+        mock_pipeline_service_create,
+        mock_pipeline_service_create_with_name2,
+        mock_pipeline_service_get,
+        mock_pipeline_v1beta1_service_batch_delete
+    ):
+        aiplatform.init(
+            project=_TEST_PROJECT,
+            staging_bucket=_TEST_GCS_BUCKET_NAME,
+            location=_TEST_LOCATION,
+            credentials=_TEST_CREDENTIALS,
+        )
+        job = pipeline_jobs.PipelineJob(
+            display_name=_TEST_PIPELINE_JOB_DISPLAY_NAME,
+            template_path=_TEST_TEMPLATE_PATH,
+            job_id=_TEST_PIPELINE_JOB_ID,
+            parameter_values=_TEST_PIPELINE_PARAMETER_VALUES,
+            input_artifacts=_TEST_PIPELINE_INPUT_ARTIFACTS,
+            enable_caching=True,
+        )
+
+        job.run(
+            sync=sync,
+            create_request_timeout=None,
+        )
+
+        if not sync:
+            job.wait()
+
+        mock_pipeline_service_create.assert_called_once_with(
+            parent=_TEST_PARENT,
+            pipeline_job=expected_gapic_pipeline_job,
+            pipeline_job_id=_TEST_PIPELINE_JOB_ID,
+            timeout=None,
+        )
+
+        mock_pipeline_service_get.assert_called_with(
+            name=_TEST_PIPELINE_JOB_NAME, retry=base._DEFAULT_RETRY
+        )
+
+        job2 = pipeline_jobs.PipelineJob(
+            display_name=_TEST_PIPELINE_JOB_DISPLAY_NAME_2,
+            template_path=_TEST_TEMPLATE_PATH,
+            job_id=_TEST_PIPELINE_JOB_ID_2,
+            parameter_values=_TEST_PIPELINE_PARAMETER_VALUES,
+            input_artifacts=_TEST_PIPELINE_INPUT_ARTIFACTS,
+            enable_caching=True,
+        )
+
+        job2.run(
+            sync=sync,
+            create_request_timeout=None,
+        )
+
+        if not sync:
+            job2.wait()
+
+        mock_pipeline_service_create_with_name2.assert_called_once_with(
+            parent=_TEST_PARENT,
+            pipeline_job=expected_gapic_pipeline_job,
+            pipeline_job_id=_TEST_PIPELINE_JOB_ID_2,
+            timeout=None,
+        )
+
+        mock_pipeline_service_get.assert_called_with(
+            name=_TEST_PIPELINE_JOB_NAME_2, retry=base._DEFAULT_RETRY
+        )
+
+        runner = (
+            preview_pipeline_jobs_batch_delete_runner.PipelineJobsBatchDeleteRunner(
+                project=_TEST_PROJECT, location=_TEST_LOCATION
+            )
+        )
+        response = runner.batch_delete_pieline_jobs(
+            names=[_TEST_PIPELINE_JOB_ID, _TEST_PIPELINE_JOB_ID_2],
+        )
+
+        assert mock_pipeline_v1beta1_service_batch_delete.call_count == 1
+        assert len(response.pipeline_jobs) == 2
