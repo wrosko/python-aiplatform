@@ -560,6 +560,7 @@ class Endpoint(aiplatform.Endpoint):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         deployment_resource_pool: Optional[DeploymentResourcePool] = None,
+        disable_container_logging: bool = False,
     ) -> None:
         """Deploys a Model to the Endpoint.
 
@@ -638,6 +639,10 @@ class Endpoint(aiplatform.Endpoint):
               are deployed to the same DeploymentResourcePool will be hosted in
               a shared model server. If provided, will override replica count
               arguments.
+            disable_container_logging (bool):
+              If True, container logs from the deployed model will not be
+              written to Cloud Logging. Defaults to False.
+
         """
         self._sync_gca_resource_if_skipped()
 
@@ -674,6 +679,7 @@ class Endpoint(aiplatform.Endpoint):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             deployment_resource_pool=deployment_resource_pool,
+            disable_container_logging=disable_container_logging,
         )
 
     @base.optional_sync()
@@ -696,6 +702,7 @@ class Endpoint(aiplatform.Endpoint):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         deployment_resource_pool: Optional[DeploymentResourcePool] = None,
+        disable_container_logging: bool = False,
     ) -> None:
         """Deploys a Model to the Endpoint.
 
@@ -768,6 +775,10 @@ class Endpoint(aiplatform.Endpoint):
               are deployed to the same DeploymentResourcePool will be hosted in
               a shared model server. If provided, will override replica count
               arguments.
+            disable_container_logging (bool):
+              If True, container logs from the deployed model will not be
+              written to Cloud Logging. Defaults to False.
+
         """
         _LOGGER.log_action_start_against_resource(
             f"Deploying Model {model.resource_name} to", "", self
@@ -794,6 +805,7 @@ class Endpoint(aiplatform.Endpoint):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             deployment_resource_pool=deployment_resource_pool,
+            disable_container_logging=disable_container_logging,
         )
 
         _LOGGER.log_action_completed_against_resource("model", "deployed", self)
@@ -823,6 +835,7 @@ class Endpoint(aiplatform.Endpoint):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         deployment_resource_pool: Optional[DeploymentResourcePool] = None,
+        disable_container_logging: bool = False,
     ) -> None:
         """Helper method to deploy model to endpoint.
 
@@ -902,6 +915,9 @@ class Endpoint(aiplatform.Endpoint):
               are deployed to the same DeploymentResourcePool will be hosted in
               a shared model server. If provided, will override replica count
               arguments.
+            disable_container_logging (bool):
+              If True, container logs from the deployed model will not be
+              written to Cloud Logging. Defaults to False.
 
         Raises:
             ValueError: If only `accelerator_type` or `accelerator_count` is
@@ -935,12 +951,14 @@ class Endpoint(aiplatform.Endpoint):
                 deploy_request_timeout=deploy_request_timeout,
                 autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
                 autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
+                disable_container_logging=disable_container_logging,
             )
 
         deployed_model = gca_endpoint_compat.DeployedModel(
             model=model.versioned_resource_name,
             display_name=deployed_model_display_name,
             service_account=service_account,
+            enable_container_logging=not disable_container_logging,
         )
 
         _LOGGER.info(model.supported_deployment_resources_types)
@@ -1039,6 +1057,7 @@ class Model(aiplatform.Model):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         deployment_resource_pool: Optional[DeploymentResourcePool] = None,
+        disable_container_logging: bool = False,
     ) -> Union[Endpoint, models.PrivateEndpoint]:
         """Deploys model to endpoint.
 
@@ -1138,6 +1157,9 @@ class Model(aiplatform.Model):
               are deployed to the same DeploymentResourcePool will be hosted in
               a shared model server. If provided, will override replica count
               arguments.
+            disable_container_logging (bool):
+              If True, container logs from the deployed model will not be
+              written to Cloud Logging. Defaults to False.
 
         Returns:
             endpoint (Union[Endpoint, models.PrivateEndpoint]):
@@ -1192,6 +1214,7 @@ class Model(aiplatform.Model):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             deployment_resource_pool=deployment_resource_pool,
+            disable_container_logging=disable_container_logging,
         )
 
     @base.optional_sync(return_input_arg="endpoint", bind_future_to_self=False)
@@ -1216,6 +1239,7 @@ class Model(aiplatform.Model):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         deployment_resource_pool: Optional[DeploymentResourcePool] = None,
+        disable_container_logging: bool = False,
     ) -> Union[Endpoint, models.PrivateEndpoint]:
         """Deploys model to endpoint.
 
@@ -1307,6 +1331,9 @@ class Model(aiplatform.Model):
               are deployed to the same DeploymentResourcePool will be hosted in
               a shared model server. If provided, will override replica count
               arguments.
+            disable_container_logging (bool):
+              If True, container logs from the deployed model will not be
+              written to Cloud Logging. Defaults to False.
 
         Returns:
             endpoint (Union[Endpoint, models.PrivateEndpoint]):
@@ -1357,6 +1384,7 @@ class Model(aiplatform.Model):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             deployment_resource_pool=deployment_resource_pool,
+            disable_container_logging=disable_container_logging,
         )
 
         _LOGGER.log_action_completed_against_resource("model", "deployed", endpoint)

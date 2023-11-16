@@ -781,6 +781,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         enable_access_logging=False,
+        disable_container_logging: bool = False,
     ) -> None:
         """Deploys a Model to the Endpoint.
 
@@ -863,6 +864,9 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
                 A default value of 60 will be used if not specified.
             enable_access_logging (bool):
                 Whether to enable endpoint access logging. Defaults to False.
+            disable_container_logging (bool):
+                If True, container logs from the deployed model will not be
+                written to Cloud Logging. Defaults to False.
         """
         self._sync_gca_resource_if_skipped()
 
@@ -898,6 +902,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             enable_access_logging=enable_access_logging,
+            disable_container_logging=disable_container_logging,
         )
 
     @base.optional_sync()
@@ -920,6 +925,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         enable_access_logging=False,
+        disable_container_logging: bool = False,
     ) -> None:
         """Deploys a Model to the Endpoint.
 
@@ -996,6 +1002,9 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
                 A default value of 60 will be used if not specified.
             enable_access_logging (bool):
                 Whether to enable endpoint access logging. Defaults to False.
+            disable_container_logging (bool):
+                If True, container logs from the deployed model will not be
+                written to Cloud Logging. Defaults to False.
         """
         _LOGGER.log_action_start_against_resource(
             f"Deploying Model {model.resource_name} to", "", self
@@ -1022,6 +1031,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             enable_access_logging=enable_access_logging,
+            disable_container_logging=disable_container_logging,
         )
 
         _LOGGER.log_action_completed_against_resource("model", "deployed", self)
@@ -1051,6 +1061,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         enable_access_logging=False,
+        disable_container_logging: bool = False,
     ) -> None:
         """Helper method to deploy model to endpoint.
 
@@ -1134,6 +1145,9 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
                 A default value of 60 will be used if not specified.
             enable_access_logging (bool):
                 Whether to enable endpoint access logging. Defaults to False.
+            disable_container_logging (bool):
+                If True, container logs from the deployed model will not be
+                written to Cloud Logging. Defaults to False.
 
         Raises:
             ValueError: If only `accelerator_type` or `accelerator_count` is specified.
@@ -1164,6 +1178,7 @@ class Endpoint(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
             display_name=deployed_model_display_name,
             service_account=service_account,
             enable_access_logging=enable_access_logging,
+            disable_container_logging=disable_container_logging,
         )
 
         supports_automatic_resources = (
@@ -2419,6 +2434,7 @@ class PrivateEndpoint(Endpoint):
         ] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         sync=True,
+        disable_container_logging: bool = False,
     ) -> None:
         """Deploys a Model to the PrivateEndpoint.
 
@@ -2509,6 +2525,7 @@ class PrivateEndpoint(Endpoint):
             explanation_spec=explanation_spec,
             metadata=metadata,
             sync=sync,
+            disable_container_logging=disable_container_logging,
         )
 
     def undeploy(
@@ -3333,6 +3350,7 @@ class Model(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         enable_access_logging=False,
+        disable_container_logging: bool = False,
     ) -> Union[Endpoint, PrivateEndpoint]:
         """Deploys model to endpoint. Endpoint will be created if unspecified.
 
@@ -3433,6 +3451,9 @@ class Model(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
                 A default value of 60 will be used if not specified.
             enable_access_logging (bool):
                 Whether to enable endpoint access logging. Defaults to False.
+            disable_container_logging (bool):
+                If True, container logs from the deployed model will not be
+                written to Cloud Logging. Defaults to False.
 
         Returns:
             endpoint (Union[Endpoint, PrivateEndpoint]):
@@ -3486,6 +3507,7 @@ class Model(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             enable_access_logging=enable_access_logging,
+            disable_container_logging=disable_container_logging,
         )
 
     @base.optional_sync(return_input_arg="endpoint", bind_future_to_self=False)
@@ -3510,6 +3532,7 @@ class Model(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
         autoscaling_target_cpu_utilization: Optional[int] = None,
         autoscaling_target_accelerator_duty_cycle: Optional[int] = None,
         enable_access_logging=False,
+        disable_container_logging: bool = False,
     ) -> Union[Endpoint, PrivateEndpoint]:
         """Deploys model to endpoint. Endpoint will be created if unspecified.
 
@@ -3603,6 +3626,9 @@ class Model(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
                 A default value of 60 will be used if not specified.
             enable_access_logging (bool):
                 Whether to enable endpoint access logging. Defaults to False.
+            disable_container_logging (bool):
+                If True, container logs from the deployed model will not be
+                written to Cloud Logging. Defaults to False.
 
         Returns:
             endpoint (Union[Endpoint, PrivateEndpoint]):
@@ -3653,6 +3679,7 @@ class Model(base.VertexAiResourceNounWithFutureManager, base.PreviewMixin):
             autoscaling_target_cpu_utilization=autoscaling_target_cpu_utilization,
             autoscaling_target_accelerator_duty_cycle=autoscaling_target_accelerator_duty_cycle,
             enable_access_logging=enable_access_logging,
+            disable_container_logging=disable_container_logging,
         )
 
         _LOGGER.log_action_completed_against_resource("model", "deployed", endpoint)
