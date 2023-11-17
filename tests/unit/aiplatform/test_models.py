@@ -108,6 +108,7 @@ _TEST_SERVING_CONTAINER_ENVIRONMENT_VARIABLES = {
     "loss_fn": "mse",
 }
 _TEST_SERVING_CONTAINER_PORTS = [8888, 10000]
+_TEST_SERVING_CONTAINER_GRPC_PORTS = [7777, 7000]
 _TEST_ID = "1028944691210842416"
 _TEST_LABEL = test_constants.ProjectConstants._TEST_LABELS
 _TEST_APPENDED_USER_AGENT = ["fake_user_agent", "another_fake_user_agent"]
@@ -1593,6 +1594,7 @@ class TestModel:
             serving_container_args=_TEST_SERVING_CONTAINER_ARGS,
             serving_container_environment_variables=_TEST_SERVING_CONTAINER_ENVIRONMENT_VARIABLES,
             serving_container_ports=_TEST_SERVING_CONTAINER_PORTS,
+            serving_container_grpc_ports=_TEST_SERVING_CONTAINER_GRPC_PORTS,
             explanation_metadata=_TEST_EXPLANATION_METADATA,
             explanation_parameters=_TEST_EXPLANATION_PARAMETERS,
             labels=_TEST_LABEL,
@@ -1613,6 +1615,11 @@ class TestModel:
             for port in _TEST_SERVING_CONTAINER_PORTS
         ]
 
+        grpc_ports = [
+            gca_model.Port(container_port=port)
+            for port in _TEST_SERVING_CONTAINER_GRPC_PORTS
+        ]
+
         container_spec = gca_model.ModelContainerSpec(
             image_uri=_TEST_SERVING_CONTAINER_IMAGE,
             predict_route=_TEST_SERVING_CONTAINER_PREDICTION_ROUTE,
@@ -1621,6 +1628,7 @@ class TestModel:
             args=_TEST_SERVING_CONTAINER_ARGS,
             env=env,
             ports=ports,
+            grpc_ports=grpc_ports,
         )
 
         managed_model = gca_model.Model(

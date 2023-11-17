@@ -936,6 +936,11 @@ class ModelContainerSpec(proto.Message):
         number=13,
         message="Probe",
     )
+    grpc_ports: MutableSequence["Port"] = proto.RepeatedField(
+        proto.MESSAGE,
+        number=14,
+        message="Port",
+    )
 
 
 class Port(proto.Message):

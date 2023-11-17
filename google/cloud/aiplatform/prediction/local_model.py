@@ -58,6 +58,7 @@ class LocalModel:
         serving_container_args: Optional[Sequence[str]] = None,
         serving_container_environment_variables: Optional[Dict[str, str]] = None,
         serving_container_ports: Optional[Sequence[int]] = None,
+        serving_container_grpc_ports: Optional[Sequence[int]] = None,
     ):
         """Creates a local model instance.
 
@@ -100,6 +101,14 @@ class LocalModel:
                 no impact on whether the port is actually exposed, any port listening on
                 the default "0.0.0.0" address inside a container will be accessible from
                 the network.
+            serving_container_grpc_ports: Optional[Sequence[int]]=None,
+                Declaration of ports that are exposed by the container. Vertex AI sends gRPC
+                prediction requests that it receives to the first port on this list. Vertex
+                AI also sends liveness and health checks to this port.
+                If you do not specify this field, gRPC requests to the container will be
+                disabled.
+                Vertex AI does not use ports other than the first one listed. This field
+                corresponds to the `ports` field of the Kubernetes Containers v1 core API.
 
         Raises:
             ValueError: If ``serving_container_spec`` is specified but ``serving_container_spec.image_uri``
@@ -121,6 +130,7 @@ class LocalModel:
 
             env = None
             ports = None
+            grpc_ports = None
 
             if serving_container_environment_variables:
                 env = [
@@ -132,6 +142,11 @@ class LocalModel:
                     gca_model_compat.Port(container_port=port)
                     for port in serving_container_ports
                 ]
+            if serving_container_grpc_ports:
+                grpc_ports = [
+                    gca_model_compat.Port(container_port=port)
+                    for port in serving_container_grpc_ports
+                ]
 
             self.serving_container_spec = gca_model_compat.ModelContainerSpec(
                 image_uri=serving_container_image_uri,
@@ -139,6 +154,7 @@ class LocalModel:
                 args=serving_container_args,
                 env=env,
                 ports=ports,
+                grpc_ports=grpc_ports,
                 predict_route=serving_container_predict_route,
                 health_route=serving_container_health_route,
             )
