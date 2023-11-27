@@ -439,6 +439,9 @@ class TestExperiments(e2e_base.TestEndToEnd):
         for key in _METRICS.keys():
             true_df_dict_3[f"metric.{key}"] = 0.0
 
+        true_df = sorted(df.fillna(0.0).to_dict("records"), key=lambda d: d["run_name"])
+        assert true_df == true_df_dict_1
+
         assert sorted(
             [true_df_dict_1, true_df_dict_2, true_df_dict_3],
             key=lambda d: d["run_name"],
