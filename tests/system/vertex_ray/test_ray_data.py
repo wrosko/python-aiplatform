@@ -27,18 +27,23 @@ import tempfile
 
 RAY_VERSION = "2.4.0"
 CLUSTER_RAY_VERSION = "2_4"
+SDK_VERSION = "1.36.4"
 PROJECT_ID = "ucaip-sample-tests"
 
 
-class TestJobSubmissionDashboard(e2e_base.TestEndToEnd):
-    _temp_prefix = "temp-job-submission-dashboard"
+class TestRayData(e2e_base.TestEndToEnd):
+    _temp_prefix = "temp-ray-data"
 
-    def test_job_submission_dashboard(self):
+    def test_ray_data(self):
+        head_node_type = vertex_ray.Resources()
+        worker_node_types = [
+            vertex_ray.Resources(),
+            vertex_ray.Resources(),
+            vertex_ray.Resources(),
+        ]
+
         assert ray.__version__ == RAY_VERSION
         aiplatform.init(project=PROJECT_ID, location="us-central1")
-
-        head_node_type = vertex_ray.Resources()
-        worker_node_types = [vertex_ray.Resources()]
 
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
@@ -46,7 +51,7 @@ class TestJobSubmissionDashboard(e2e_base.TestEndToEnd):
         cluster_resource_name = vertex_ray.create_ray_cluster(
             head_node_type=head_node_type,
             worker_node_types=worker_node_types,
-            cluster_name=f"ray-cluster{timestamp}-test-job-submission-dashboard",
+            cluster_name=f"ray-cluster-{timestamp}-test-ray-data",
         )
 
         cluster_details = vertex_ray.get_ray_cluster(cluster_resource_name)
@@ -58,25 +63,27 @@ class TestJobSubmissionDashboard(e2e_base.TestEndToEnd):
 
         my_script = """
         import ray
-        import time
+        from vertex_ray import BigQueryDatasource
 
-        @ray.remote
-        def hello_world():
-            return "hello world"
+        parallelism = 10
+        query = "SELECT * FROM `bigquery-public-data.ml_datasets.ulb_fraud_detection` LIMIT 10000000"
 
-        @ray.remote
-        def square(x):
-            print(x)
-            time.sleep(100)
-            return x * x
+        ds = ray.data.read_datasource(
+            BigQueryDatasource(),
+            parallelism=parallelism,
+            query=query
+        )
+        # The reads are lazy, so the end time cannot be captured until ds.fully_executed() is called
+        ds.fully_executed()
 
-        ray.init()  # No need to specify address="vertex_ray://...."
-        print(ray.get(hello_world.remote()))
-        print(ray.get([square.remote(i) for i in range(4)]))
+        # Write
+        ds.write_datasource(
+            BigQueryDatasource(),
+            dataset='bugbashbq1.system_test_write',
+        )
         """
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Create my_script.py file
             fp = os.path.join(temp_dir, "my_script.py")
             f = open(fp, "w")
             f.write(my_script)
@@ -86,7 +93,10 @@ class TestJobSubmissionDashboard(e2e_base.TestEndToEnd):
                 # Entrypoint shell command to execute
                 entrypoint="python my_script.py",
                 # Path to the local directory that contains the my_script.py file
-                runtime_env={"working_dir": temp_dir},
+                runtime_env={
+                    "working_dir": temp_dir,
+                    "pip": ["google-cloud-aiplatform[ray]==" + SDK_VERSION],
+                },
             )
 
             job_status = None
